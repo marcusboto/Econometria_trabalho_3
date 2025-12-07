@@ -1,0 +1,31 @@
+#TRABALHO ECONOMETRIA
+#PROFESSOR: VITOR PEREIRA
+#GRUPO: MARCUS BOTO, PEDRO LATINI
+
+
+# ================================================================
+# CÓDIGO DA QUESTÃO 3.8: TAMANHO DA CLASSE
+# ================================================================
+
+# O problema de rodar uma regressão OLS simples das notas (answers_math_std) no tamanho da turma (clsize_snv) é a Endogeneidade, 
+# o que leva a um viés de variável omitida e/ou viés de seleção.
+
+# Viés de Variável Omitida:
+# O tamanho da turma não é atribuído aleatoriamente. Fatores não observáveis que afetam a nota também influenciam o tamanho da 
+# turma, gerando correlação entre o regressor (Tamanho da Turma) e o termo de erro.
+
+# Exemplo (Viés de Seleção): Diretores podem intencionalmente alocar alunos com necessidades especiais ou baixo desempenho em 
+# turmas menores.
+
+# Neste caso, a correlação entre Tamanho da Turma e termo de erro é positiva (turmas menores estão associadas a fatores negativos 
+# não observados), o que leva a uma subestimação do benefício de turmas menores. O OLS indicaria que turmas menores têm notas 
+# piores, quando na verdade, o problema é a qualidade inicial dos alunos alocados lá.
+
+#Viés de Seleção:
+# O Decreto Ministeriale 331/98 da Itália permite exceções à regra. A capacidade de diretores ou professores de ajustar ligeiramente
+# o tamanho da turma real (clsize_snv) em torno do limite (cutoff) é conhecida como "manipulação do ponto de corte" ou "sorteio 
+# não aleatório".
+
+# Essa manipulação destrói o pressuposto de exogeneidade, pois a alocação para ser uma turma pequena (ou grande) não é mais 
+# aleatória na vizinhança do cutoff.
+

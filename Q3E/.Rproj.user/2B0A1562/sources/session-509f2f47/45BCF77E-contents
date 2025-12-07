@@ -1,0 +1,72 @@
+#TRABALHO ECONOMETRIA
+#PROFESSOR: VITOR PEREIRA
+#GRUPO: MARCUS BOTO, PEDRO LATINI
+
+
+# ===============================================================================
+# CÓDIGO DA QUESTÃO 3.16: IV COM DOIS INSTRUMENTOS: REGRA DE MAIMÔNIDES + SORTEIO
+# ===============================================================================
+
+# 1. Importar bibliotecas
+library(AER)
+library(dplyr)
+
+# 2. Controles
+controles <- "female + immigrants_broad + dad_lowedu + dad_midedu + dad_highedu +
+              mom_unemp + mom_housew + mom_employed + north + centre + south"
+
+# 3. Fórmula IV
+form_iv <- as.formula(
+  paste0(
+    "answers_math_std ~ clsize_snv + our_CHEAT_math + ", controles,
+    " | ",
+    "clsize_hat + o_math + ", controles
+  )
+)
+
+# 4. Estimação
+reg_maimonides2 <- ivreg(
+  form_iv,
+  data = Maimonides_italia,
+  cluster = "cluster_id"
+)
+
+summary(reg_maimonides2)
+
+# Stargazer da comparação com o modelo anterior
+stargazer(
+  reg_maimonides,
+  reg_maimonides2,
+  type = "html",
+  out = "iv.html",
+  title = "IV: Interação entre Tamanho da Turma e Manipulação"
+)
+
+
+# Esse modelo estima o efeito causal do tamanho da turma no
+# desempenho, considerando simultaneamente que:
+#   (1) o tamanho real da turma é endógeno
+#   (2) professores podem manipular as notas (our_CHEAT_math)
+
+# Para corrigir ambas as endogeneidades, utilizamos dois instrumentos:
+#   Regra de Maimônides (clsize_hat), que afeta mecanicamente
+#   o tamanho da turma.
+#   Sorteio do observador (o_math), que afeta a probabilidade
+#   de manipulação dos testes.
+
+# Assim, clsize_snv e our_CHEAT_math são instrumentados por
+# clsize_hat e o_math, respectivamente.
+
+# Os controles são incluídos nas duas equações (1ª e 2ª etapa),
+# garantindo consistência dos estimadores.
+
+# A interpretação dos coeficientes:
+# O coeficiente de clsize_snv indica o efeito causal do tamanho
+# da turma sobre o desempenho, após corrigir por manipulação.
+
+# O coeficiente de our_CHEAT_math mostra como a manipulação
+# afeta diretamente a nota reportada, e permite isolar o efeito
+# real do tamanho da turma.
+
+# Como há 2 instrumentos e 2 variáveis endógenas, o modelo está
+# sobre-identificado, permitindo testes de Hansen/Sargan.

@@ -1,0 +1,460 @@
+title: "Trabalho Econometria"
+author: "Pedro Affonso Ferreira Latini, Marcus Vinicius Rocha Boto"
+date: "2025-12-06"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+source("code/_master.R")
+```
+
+## Introdução
+
+  Neste arquivo markdown iremos responder a terceira questão do trabalho, gerado a partir do arquivo smallmo.dta fornecido pelo professor.
+
+##  Questão 3 
+
+Como sugestão do professor, utilizamos o comando pacman para instalar e gerenciar pacotes, ele está disponível na subpasta code.
+
+```{r Pacman}
+######## Instalar o pacote pacman ######## 
+
+install.packages("pacman")
+
+pacman::p_load(
+  readstata13,
+  dplyr,        
+  ggplot2,      
+  stargazer,    
+  AER,          
+  lmtest,       
+  sandwich,     
+  broom,
+  tidyr
+)
+```
+
+### 3.1 - Características da Amostra e Estatísticas Descritivas
+
+  Códigos utilizados se encontram no arquivo PREENCHER.
+```{r Char}
+
+
+
+Maimonides_italia <- read.dta13(file.path("input/smallmo.dta")) #Usa read.ddta13 para ober dados a partir do input
+
+variaveis_descritivas <- Maimonides_italia %>% #Escolhe as estatísticas designadas
+  select(
+    answers_math_std,    
+    answers_ital_std,    
+    female,              
+    immigrants_broad,    
+    dad_lowedu,          
+    dad_midedu,          
+    mom_unemp,           
+    answers_math_pct,    
+    answers_ital_pct,    
+    our_CHEAT_ital,      
+    our_CHEAT_math       
+  )
+
+stargazer(variaveis_descritivas,  #USA PACOTE STARGAZER PARA GERAR A TABELA
+          type = "html",
+          title = "Estatísticas Descritivas - Dados Italianos",
+          digits = 3,
+          covariate.labels = c(
+            "Nota Padronizada - Matemática",
+            "Nota Padronizada - Italiano",
+            "Sexo Feminino (Dummy)",
+            "Imigrante (Dummy)",
+            "Pai com Baixa Educação",
+            "Pai com Educação Média", 
+            "Mãe Desempregada",
+            "Percentil - Matemática",
+            "Percentil - Italiano",
+            "Indício Manipulação - Italiano",
+            "Indício Manipulação - Matemática"
+          ),
+          summary.stat = c("n", "mean", "median", "sd", "min", "max"),
+          out = file.path(output, "questao3_1_estatisticas_descritivas.html"))
+
+```
+### 3.2 - Cálculo de médias de variáveis por região italiana e série
+
+```{r Medias}
+
+
+
+medias_por_regiao_serie <- Maimonides_italia %>% #Calcula usando pacote dplyr
+  group_by(area, grade) %>%
+  summarise(
+    media_answers_math_std = mean(answers_math_std, na.rm = TRUE),
+    media_answers_ital_std = mean(answers_ital_std, na.rm = TRUE),
+    media_female = mean(female, na.rm = TRUE),
+    media_immigrants_broad = mean(immigrants_broad, na.rm = TRUE),
+    media_dad_lowedu = mean(dad_lowedu, na.rm = TRUE),
+    media_dad_midedu = mean(dad_midedu, na.rm = TRUE),
+    media_mom_unemp = mean(mom_unemp, na.rm = TRUE),
+    media_answers_math_pct = mean(answers_math_pct, na.rm = TRUE),
+    media_answers_ital_pct = mean(answers_ital_pct, na.rm = TRUE),
+    media_our_CHEAT_ital = mean(our_CHEAT_ital, na.rm = TRUE),
+    media_our_CHEAT_math = mean(our_CHEAT_math, na.rm = TRUE)
+  )
+
+
+stargazer(medias_por_regiao_serie, #Tabela Stargazer
+          type = "html",
+          title = "Médias por região e série",
+          summary = FALSE,
+          rownames = FALSE,
+          digits = 2,
+          out = "output/tabela_medias.html")  # salva em output
+
+
+```
+### 3.3 - Aleatorização
+
+  O balanceamento é importante pois precisamos garandir que os grupos de tratamento e controle tenham sido bem randomizados. Caso isso não acontece, ou seja características dos grupos sejam muito diferentes, estamos comprometendo o experimento, uma vez que as diferenças observadas podem ser atribuídas a estas características diferentes, e não ao experimento em si (tratamento x controle).
+
+  Uma boa variável que devemos observar o balanceamento é a immigrants_broad, que indica o percentual de estudantes imigrantes nas escolas. Ela é fundamental pois ser imigrante introduz dificuldades de aprendizado por falta de domínio do idioma nativo, além de possível discriminação.
+  
+### 3.4 - Balanceamento
+
+```{r Balance}
+
+varie <- c("female", "immigrants_broad", "dad_lowedu", "dad_midedu", "mom_unemp") #Variáveis escolhidas
+
+resultados_balanceamento <- data.frame(
+  Variavel = character(),
+  Media_Tratamento = numeric(),
+  Media_Controle = numeric(),
+  Diferenca = numeric(),
+  p_valor = numeric(),
+  stringsAsFactors = FALSE
+)
+
+for (var in varie) {
+  tratamento <- Maimonides_italia[[var]][Maimonides_italia$o_math == 1]
+  controle <- Maimonides_italia[[var]][Maimonides_italia$o_math == 0]
+  
+  teste <- t.test(tratamento, controle)
+  
+  resultados_balanceamento <- rbind(resultados_balanceamento, 
+                                    data.frame(
+                                      Variavel = var,
+                                      Media_Tratamento = mean(tratamento, na.rm = TRUE),
+                                      Media_Controle = mean(controle, na.rm = TRUE),
+                                      Diferenca = teste$estimate[1] - teste$estimate[2],
+                                      p_valor = teste$p.value
+                                    ))
+}
+
+```
+
+### 3.5 - Balanceamento via Regressão
+
+```{r Regs}
+
+# 1. Regressão simples
+
+reg1 <- lm(mom_unemp ~ o_math, data = Maimonides_italia)
+reg1_cluster <- coeftest(reg1,
+                         vcov = vcovCL(reg1, cluster = Maimonides_italia$CLUSTER))
+
+# 2. Regressão com controles
+reg2 <- lm(mom_unemp ~ o_math + female + immigrants_broad +
+             dad_lowedu + dad_midedu,
+           data = Maimonides_italia)
+
+reg2_cluster <- coeftest(reg2,
+                         vcov = vcovCL(reg2, cluster = Maimonides_italia$CLUSTER))
+# 3. Regressão com efeitos fixos
+###############################################################
+reg3 <- lm(mom_unemp ~ o_math + factor(area),
+           data = Maimonides_italia)
+
+reg3_cluster <- coeftest(reg3,
+                         vcov = vcovCL(reg3, cluster = Maimonides_italia$CLUSTER))
+
+# 4. Interação
+
+reg4 <- lm(mom_unemp ~ o_math + factor(area) * enrol_ins_snv,
+           data = Maimonides_italia)
+
+reg4_cluster <- coeftest(reg4,
+                         vcov = vcovCL(reg4, cluster = Maimonides_italia$CLUSTER))
+
+# 5. Tabela HTML
+stargazer(reg1, reg2, reg3, reg4,
+          type = "html",
+          out = "balanceamento_ex35.html",
+          title = "output/Exercício 3.5 — Balanceamento")
+
+
+```
+### 3.6 - Monitoramento Regional
+
+```{r MonReg}
+# Variável Dependente:
+VD <- "our_CHEAT_ital"
+
+reg_interacao_fraude <- lm(
+  as.formula(paste(VD, "~ o_math * factor(area) + factor(grade)")),
+  data = Maimonides_italia,
+  na.action = na.omit
+)
+
+# Geração da Tabela Stargazer
+stargazer(reg_interacao_fraude,
+          type = "html", # Altere para "latex" para Overleaf
+          title = "Impacto do Monitoramento sobre a Fraude: Análise de Interação Regional",
+          dep.var.labels = c("Fraude em Italiano"),
+          # Nota: Os labels para as interações são gerados automaticamente pelo R.
+          covariate.labels = c("Monitoramento (Norte Ref.)", 
+                               "Região Central (Nível Base)", "Região Sul (Nível Base)",
+                               "Série (Grade 2)", "Série (Grade 3)", "Série (Grade 4)",
+                               "Interação: Monit. x Centro", "Interação: Monit. x Sul"),
+          out = "monitoramento_regional_interacao.html",
+          add.lines = list(c("Referência Regional", "Norte"),
+                           c("Referência de Série", "Grade 1")),
+          digits = 4)
+
+```
+### 3.7 - Notas Regionais
+
+```{r NotReg}
+
+# Variável Dependente
+VD <- "answers_math_std"
+
+Maimonides_italia <- Maimonides_italia %>%
+  mutate(is_sul = ifelse(area == 3, 1, 0)) # 1 se for Sul, 0 caso contrário
+
+reg_interacao_notas <- lm(
+  answers_math_std ~ o_math * is_sul + factor(area) + factor(grade),
+  data = Maimonides_italia,
+  na.action = na.omit
+)
+
+# Geração da Tabela Stargazer
+stargazer(reg_interacao_notas,
+          type = "html", # Altere para "latex" para Overleaf
+          title = "Impacto do Monitoramento nas Notas: Efeito Diferencial no Sul",
+          dep.var.labels = c("Nota de Matemática (Std)"),
+          # Nota: O termo de interação 'o_math:is_sul' é o coeficiente chave (delta 1).
+          covariate.labels = c("Monitoramento (Norte Ref.)", 
+                               "Sul (Dummy de Nível)", 
+                               "Região Central (Dummy)", "Região Sul (Dummy - Base)", # Dummies da área
+                               "Série (Grade 2)", "Série (Grade 3)", "Série (Grade 4)",
+                               "Interação: Monit. x Sul (Diferença)"),
+          out = "notas_regional_interacao.html",
+          add.lines = list(c("Referência Regional", "Norte"),
+                           c("Referência de Série", "Grade 1")),
+          digits = 4)
+```
+### 3.8 - Tamanho da Turma
+
+ O problema de rodar uma regressão OLS simples das notas (answers_math_std) no tamanho da turma (clsize_snv) é a Endogeneidade, o que leva a um viés de variável omitida e/ou viés de seleção.
+
+#### Viés de Variável Omitida:
+
+  O tamanho da turma não é atribuído aleatoriamente. Fatores não observáveis que afetam a nota também influenciam o tamanho da turma, gerando correlação entre o regressor (Tamanho da Turma) e o termo de erro.
+
+#### Exemplo (Viés de Seleção): 
+
+  Diretores podem intencionalmente alocar alunos com necessidades especiais ou baixo desempenho em turmas menores. Neste caso, a correlação entre Tamanho da Turma e termo de erro é positiva (turmas menores estão associadas a fatores negativos não observados), o que leva a uma subestimação do benefício de turmas menores. O OLS indicaria que turmas menores têm notas piores, quando na verdade, o problema é a qualidade inicial dos alunos alocados lá.
+
+### 3.9 - Maimônides
+
+  A Regra de Maimônides (ou qualquer regra de limite/teto) é crucial porque resolve o problema de Endogeneidade presente na regressão OLS simples. Ela transforma a variação no tamanho da turma de uma decisão endógena da escola para uma variação exógena no ponto de corte.
+
+#### Importância para o Efeito Causal (RDD):
+
+  A regra estipula que, se a matrícula ultrapassar um limite (cutoff), a turma deve ser dividida em duas. Por exemplo, na regra antiga italiana, se a matrícula for acima de 25 (ou 28, considerando a tolerância ), uma nova turma é aberta, forçando o tamanho médio da turma para baixo.
+
+#### Identificação: 
+  
+  Um aluno que mal perde o corte (matrícula de 26) é muito semelhante a um aluno que mal o ultrapassa (matrícula de 25) em termos de características não observáveis. No entanto, o aluno do grupo de 26 alunos será alocado em uma turma menor devido à regra, enquanto o aluno do grupo de 25 permanecerá em uma turma maior.
+
+#### Efeito Causal: 
+
+Ao comparar o resultado (nota) dos alunos logo acima e logo abaixo do limite (o cutoff), a única coisa que muda abruptamente é o tamanho predito da turma. Isso permite que a diferença na nota seja atribuída causalmente à mudança forçada no tamanho da turma.
+
+#### Hipóteses Necessárias para o RDD:
+
+  Para que o RDD (Regressão de Descontinuidade) funcione e recupere o efeito causal do tamanho da turma, duas hipóteses principais devem ser satisfeitas:
+
+ 1) Continuidade	A relação funcional entre a variável de atribuição (matrícula) e o resultado (nota) é contínua em torno do corte. Não deve haver saltos na nota ou nas características do aluno exceto pela intervenção do tratamento (a abertura da nova turma).
+ 
+ 2) Não Manipulação do Corte: Os indivíduos (neste caso, escolas ou diretores) não devem ser capazes de manipular perfeitamente a variável de atribuição (matrícula) para serem alocados no lado mais vantajoso do corte. Se a manipulação for grosseira, o desenho falha, pois a alocação não é mais "quase aleatória" perto do limite.
+ 
+### 3.10 -  RDD
+
+```{R}
+
+
+# 1. Pela regra italiana (serão nossos cutoffs)
+cutoff_baixo <- 22  # Financia turma adicional
+cutoff_alto <- 28   # Exige nova turma
+
+# 2. Criar categorias
+Maimonides_italia <- Maimonides_italia %>%
+  mutate(
+    categoria = case_when(
+      clsize_hat < cutoff_baixo ~ "Abaixo de 22",
+      clsize_hat >= cutoff_baixo & clsize_hat < cutoff_alto ~ "Entre 22 e 28",
+      clsize_hat >= cutoff_alto ~ "28 ou mais"
+    ),
+    # Dummy
+    acima_22 = ifelse(clsize_hat >= cutoff_baixo, 1, 0),
+    acima_28 = ifelse(clsize_hat >= cutoff_alto, 1, 0)
+  )
+
+# 3. Scatterplot agrupado
+dados_plot <- Maimonides_italia %>%
+  filter(!is.na(categoria)) %>%
+  group_by(clsize_hat, categoria) %>%
+  summarise(
+    mean_score = mean(answers_math_std, na.rm = TRUE),
+    n_obs = n(),
+    .groups = "drop"
+  )
+
+# 4. Regressões para cada segmento
+# Segmento 1: Abaixo de 22
+reg_abaixo22 <- lm(answers_math_std ~ clsize_hat,
+                   data = Maimonides_italia %>% 
+                     filter(categoria == "Abaixo de 22"))
+
+# Segmento 2: Entre 22 e 28
+reg_entre22_28 <- lm(answers_math_std ~ clsize_hat,
+                     data = Maimonides_italia %>% 
+                       filter(categoria == "Entre 22 e 28"))
+
+# 5. Linhas previstas para cada segmento
+# Abaixo de 22
+x_abaixo <- seq(min(dados_plot$clsize_hat[dados_plot$categoria == "Abaixo de 22"]),
+                cutoff_baixo - 0.1,
+                length.out = 100)
+pred_abaixo <- data.frame(clsize_hat = x_abaixo)
+pred_abaixo$pred <- predict(reg_abaixo22, newdata = pred_abaixo)
+
+# Entre 22 e 28
+x_entre <- seq(cutoff_baixo,
+               cutoff_alto - 0.1,
+               length.out = 100)
+pred_entre <- data.frame(clsize_hat = x_entre)
+pred_entre$pred <- predict(reg_entre22_28, newdata = pred_entre)
+
+# 28 ou mais (se houver dados)
+if (sum(Maimonides_italia$categoria == "28 ou mais", na.rm = TRUE) > 5) {
+  x_acima <- seq(cutoff_alto,
+                 max(dados_plot$clsize_hat[dados_plot$categoria == "28 ou mais"]),
+                 length.out = 100)
+  pred_acima <- data.frame(clsize_hat = x_acima)
+  pred_acima$pred <- predict(reg_acima28, newdata = pred_acima)
+} else {
+  pred_acima <- NULL
+}
+
+# 6. Gráfico completo
+p <- ggplot() +
+  # Pontos coloridos por categoria
+  geom_point(data = dados_plot,
+             aes(x = clsize_hat, y = mean_score, color = categoria, size = n_obs),
+             alpha = 0.5) +
+  
+  # Linhas de regressão para cada segmento
+  geom_line(data = pred_abaixo, aes(x = clsize_hat, y = pred),
+            color = "#1f77b4", size = 1.2) +  # Azul
+  
+  geom_line(data = pred_entre, aes(x = clsize_hat, y = pred),
+            color = "#ff7f0e", size = 1.2) +  # Laranja
+  
+  # Linhas verticais dos cutoffs
+  geom_vline(xintercept = c(cutoff_baixo, cutoff_alto),
+             linetype = "dashed", size = 1, alpha = 0.7) +
+  
+  # Anotações dos cutoffs
+  annotate("text", x = cutoff_baixo, y = max(dados_plot$mean_score),
+           label = "Cutoff = 22\n(Financia turma adicional)",
+           hjust = 1.1, vjust = 1, size = 3.5, fontface = "bold") +
+  
+  annotate("text", x = cutoff_alto, y = max(dados_plot$mean_score),
+           label = "Cutoff = 28\n(Exige nova turma)",
+           hjust = -0.1, vjust = 1, size = 3.5, fontface = "bold") +
+  
+  # Linha para acima de 28 (se existir)
+  if (!is.null(pred_acima)) {
+    p <- p + geom_line(data = pred_acima, aes(x = clsize_hat, y = pred),
+                       color = "#2ca02c", size = 1.2)  # Verde
+  }
+
+# Estética
+labs(title = "RDD com Múltiplos Cutoffs: Notas vs Tamanho Predito",
+     subtitle = "Regra italiana: cutoff em 22 (financiamento) e 28 (obrigatório)",
+     x = "Tamanho Predito da Classe (clsize_hat)",
+     y = "Nota média padronizada (answers_math_std)",
+     color = "Faixa de tamanho",
+     size = "Nº de observações") +
+  scale_color_manual(values = c("Abaixo de 22" = "#1f77b4",
+                                "Entre 22 e 28" = "#ff7f0e",
+                                "28 ou mais" = "#2ca02c")) +
+  scale_size_continuous(range = c(1, 4)) +
+  theme_minimal() +
+  theme(legend.position = "bottom",
+        plot.title = element_text(face = "bold", size = 14),
+        plot.subtitle = element_text(size = 11))
+
+print(p)
+
+# 7. Resultados das regressões
+cat("\n=== RESULTADOS DAS REGRESSÕES POR SEGMENTO ===\n")
+
+cat("\n1. ABAIXO DE 22:\n")
+print(summary(reg_abaixo22))
+
+cat("\n2. ENTRE 22 E 28:\n")
+print(summary(reg_entre22_28))
+
+cat("\n3. 28 OU MAIS:\n")
+if (exists("reg_acima28") && !is.null(reg_acima28)) {
+  print(summary(reg_acima28))
+} else {
+  cat("Poucas observações para estimar\n")
+}
+
+# 8. Estatísticas descritivas por categoria
+cat("\n=== ESTATÍSTICAS POR CATEGORIA ===\n")
+stats_categorias <- Maimonides_italia %>%
+  group_by(categoria) %>%
+  summarise(
+    n = n(),
+    media_nota = mean(answers_math_std, na.rm = TRUE),
+    media_tamanho = mean(clsize_hat, na.rm = TRUE),
+    .groups = "drop"
+  )
+print(stats_categorias)
+
+# 9. Salvar gráfico
+ggsave("output/rdd_multiplos_cutoffs.png", p, width = 11, height = 7, dpi = 300)
+
+# 10. Tabela para relatório (opcional)
+library(stargazer)
+stargazer(reg_abaixo22, reg_entre22_28, 
+          type = "html",
+          title = "Regressões RDD por Segmento de Tamanho de Turma",
+          dep.var.labels = "Nota padronizada em matemática",
+          covariate.labels = c("Tamanho predito da turma"),
+          column.labels = c("Abaixo de 22", "Entre 22-28"),
+          out = "output/regressoes_rdd.html")
+
+```
+
+
+
+
+

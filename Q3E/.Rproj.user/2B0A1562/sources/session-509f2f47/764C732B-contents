@@ -1,0 +1,34 @@
+#TRABALHO ECONOMETRIA
+#PROFESSOR: VITOR PEREIRA
+#GRUPO: MARCUS BOTO, PEDRO LATINI
+
+
+# ================================================================
+# CÓDIGO DA QUESTÃO 3.9: MAIMÔNIDES
+# ================================================================
+
+# A Regra de Maimônides (ou qualquer regra de limite/teto) é crucial porque resolve o problema de Endogeneidade presente 
+# na regressão OLS simples. Ela transforma a variação no tamanho da turma de uma decisão endógena da escola para uma variação 
+# exógena no ponto de corte.
+
+# Importância para o Efeito Causal (RDD):
+# A regra estipula que, se a matrícula ultrapassar um limite (cutoff), a turma deve ser dividida em duas. Por exemplo, na regra 
+# antiga italiana, se a matrícula for acima de 25 (ou 28, considerando a tolerância ), uma nova turma é aberta, forçando o tamanho 
+# médio da turma para baixo.
+
+# Identificação: Um aluno que mal perde o corte (matrícula de 26) é muito semelhante a um aluno que mal o ultrapassa (matrícula de
+# 25) em termos de características não observáveis. No entanto, o aluno do grupo de 26 alunos será alocado em uma turma menor 
+# devido à regra, enquanto o aluno do grupo de 25 permanecerá em uma turma maior.
+
+# Efeito Causal: Ao comparar o resultado (nota) dos alunos logo acima e logo abaixo do limite (o cutoff), a única coisa que muda 
+# abruptamente é o tamanho predito da turma. Isso permite que a diferença na nota seja atribuída causalmente à mudança forçada no 
+# tamanho da turma.
+
+# Hipóteses Necessárias para o RDD:
+# Para que o RDD (Regressão de Descontinuidade) funcione e recupere o efeito causal do tamanho da turma, duas hipóteses principais 
+# devem ser satisfeitas:
+# 1) Continuidade	A relação funcional entre a variável de atribuição (matrícula) e o resultado (nota) é contínua em torno do corte. 
+# Não deve haver saltos na nota ou nas características do aluno exceto pela intervenção do tratamento (a abertura da nova turma).
+# 2) Não Manipulação do Corte: Os indivíduos (neste caso, escolas ou diretores) não devem ser capazes de manipular perfeitamente a 
+# variável de atribuição (matrícula) para serem alocados no lado mais vantajoso do corte. Se a manipulação for grosseira, o 
+# desenho falha, pois a alocação não é mais "quase aleatória" perto do limite.

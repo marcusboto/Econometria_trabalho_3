@@ -1,0 +1,68 @@
+#TRABALHO ECONOMETRIA
+#PROFESSOR: VITOR PEREIRA
+#GRUPO: MARCUS BOTO, PEDRO LATINI
+
+
+# ================================================================
+# CÓDIGO DA QUESTÃO 3.1: ESTATÍSTICAS DESCRITIVAS
+# ================================================================
+
+# 1. Importar bibliotecas
+library(AER)
+library(dplyr)
+
+controles <- c(
+  "female",
+  "immigrants_broad",
+  "dad_lowedu", "dad_midedu", "dad_highedu",
+  "mom_unemp", "mom_housew", "mom_employed",
+  "north", "centre", "south"
+)
+
+formula_iv <- as.formula(
+  paste(
+    "answers_math_std ~ clsize_snv +", 
+    paste(controles, collapse = " + "),
+    "| clsize_hat +", 
+    paste(controles, collapse = " + ")
+  )
+)
+
+# 2. Estimação IV
+reg_maimonides <- ivreg(
+  formula_iv,
+  data = Maimonides_italia,
+  subset = !is.na(answers_math_std),
+  cluster = Maimonides_italia$cluster_id
+)
+
+summary(reg_maimonides)
+
+
+# O tamanho predito da turma (clsize_hat) deriva da Regra de Maimônides,
+# que define determinística e mecanicamente quando uma turma deve ser
+# dividida em duas com base no número total de alunos.
+
+# Essa regra não depende de atributos dos alunos ou da escola, mas apenas
+# do ponto em que a capacidade é atingida, gerando variação exógena no
+# tamanho da turma real (clsize_snv).
+
+# Portanto, clsize_hat é um instrumento válido porque:
+
+# 1) Relevância:
+# Quando enrolment ultrapassa o cutoff da Regra de Maimônides,
+# clsize_hat muda abruptamente -> forte correlação com clsize_snv.
+
+# 2) Exogeneidade:
+# A regra não depende das características dos alunos (habilidade,
+# SES, origem) -> varia apenas por razões mecânicas.
+
+# 3) Exclusion Restriction:
+# A regra afeta o desempenho apenas através do tamanho da turma real,
+# não por outros canais.
+
+# Logo, clsize_hat é usado como instrumento em um estimador 2SLS:
+#   clsize_hat -> clsize_real
+#   clsize_real -> desempenho (answers_math_std)
+
+# Controles precisam entrar dos dois lados para manter ortogonalidade.

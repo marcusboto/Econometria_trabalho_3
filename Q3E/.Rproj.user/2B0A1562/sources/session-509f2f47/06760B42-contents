@@ -1,0 +1,38 @@
+#TRABALHO ECONOMETRIA
+#PROFESSOR: VITOR PEREIRA
+#GRUPO: MARCUS BOTO, PEDRO LATINI
+
+
+# ================================================================
+# CÓDIGO DA QUESTÃO 3.17: INTERPRETAÇÃO
+# ================================================================
+
+
+# Interpretação baseada nos resultados da questão 3.16/3.17
+#
+# 1) Coeficiente do tamanho da turma (clsize_snv):
+#    - Modelo 1 (somente tamanho como endógeno): -0.006***
+#    - Modelo 2 (tamanho + manipulação como endógenas): -0.004***
+#    -> O efeito é negativo e estatisticamente significativo em ambos os casos,
+#    indicando que turmas maiores tendem a ter desempenho ligeiramente menor.
+
+# 2) Coeficiente da manipulação (our_CHEAT_math):
+#    - Modelo 2: 3.317***
+#    -> Muito positivo e altamente significativo.
+#    Isso mostra que a manipulação das notas pelos professores inflaciona
+#    artificialmente os resultados. Parte do efeito negativo do tamanho da turma
+#    era mascarado quando não controlávamos para manipulação.
+
+# 3) Comparação entre os modelos:
+#    O coeficiente de clsize_snv diminui em magnitude ao incluir our_CHEAT_math.
+#    Isso indica que professores provavelmente manipulavam notas mais nas turmas
+#    maiores, aumentando artificialmente o desempenho médio.
+#    Sem controlar por manipulação, o efeito do tamanho da sala estava superestimado
+#    (em magnitude negativa) ou, dependendo da direção da manipulação, parcialmente mascarado.
+
+# 4) Conclusão:
+#    A inclusão da variável de manipulação permite isolar o efeito puramente causal
+#    do tamanho da turma sobre o desempenho.
+#    A manipulação tem impacto grande, positivo e estatisticamente robusto.
+#    Portanto, parte do efeito estimado do tamanho da turma em modelos simples
+#    é contaminado por alterações artificiais nas notas.

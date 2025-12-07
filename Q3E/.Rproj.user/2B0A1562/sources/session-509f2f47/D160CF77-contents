@@ -1,0 +1,47 @@
+#TRABALHO ECONOMETRIA
+#PROFESSOR: VITOR PEREIRA
+#GRUPO: MARCUS BOTO, PEDRO LATINI
+
+
+# ================================================================
+# CÓDIGO DA QUESTÃO 3.1: ESTATÍSTICAS DESCRITIVAS
+# ================================================================
+
+# 1. Criar o cutoff
+
+Maimonides_italia <- Maimonides_italia %>%
+  mutate(lado_cutoff = ifelse(clsize_hat < 40, "Esquerda", "Direita"))
+
+table(Maimonides_italia$lado_cutoff)
+
+# 2. Scatterplot das notas por classe
+dados_plot <- Maimonides_italia %>%
+  group_by(clsize_hat) %>%
+  summarise(mean_score = mean(answers_math_std, na.rm = TRUE),
+            lado_cutoff = first(lado_cutoff))
+
+# 3. Regressões separadas
+reg_esq <- lm(answers_math_std ~ clsize_hat,
+              data = Maimonides_italia %>% filter(lado_cutoff == "Esquerda"))
+reg_dir <- lm(answers_math_std ~ clsize_hat,
+              data = Maimonides_italia %>% filter(lado_cutoff == "Direita"))
+
+# 4. Linhas previstas
+linha_esq <- data.frame(clsize_hat = seq(min(dados_plot$clsize_hat), 40, length.out = 100))
+linha_esq$pred <- predict(reg_esq, newdata = linha_esq)
+
+linha_dir <- data.frame(clsize_hat = seq(40, max(dados_plot$clsize_hat), length.out = 100))
+linha_dir$pred <- predict(reg_dir, newdata = linha_dir)
+
+# 5. Gráfico final
+ggplot() +
+  geom_point(data = dados_plot,
+             aes(x = clsize_hat, y = mean_score), alpha = 0.5) +
+  geom_line(data = linha_esq,
+            aes(x = clsize_hat, y = pred), color = "blue", size = 1) +
+  geom_line(data = linha_dir,
+            aes(x = clsize_hat, y = pred), color = "red", size = 1) +
+  labs(title = "RDD: Notas vs Tamanho Predito da Classe",
+       x = "Tamanho Predito da Classe (clsize_hat)",
+       y = "Nota média (answers_math_std)") +
+  theme_minimal()

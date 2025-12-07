@@ -1,0 +1,15 @@
+######## Instalar o pacote pacman ######## 
+
+install.packages("pacman")
+
+pacman::p_load(
+  readstata13,
+  dplyr,        
+  ggplot2,      
+  stargazer,    
+  AER,          
+  lmtest,       
+  sandwich,     
+  broom,
+  tidyr
+)

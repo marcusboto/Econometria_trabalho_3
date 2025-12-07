@@ -1,0 +1,38 @@
+#TRABALHO ECONOMETRIA
+#PROFESSOR: VITOR PEREIRA
+#GRUPO: MARCUS BOTO, PEDRO LATINI
+
+
+# ================================================================
+# 3.4 - Balanceamento
+# ================================================================
+
+
+varie <- c("female", "immigrants_broad", "dad_lowedu", "dad_midedu", "mom_unemp") #Variáveis escolhidas
+
+resultados_balanceamento <- data.frame(
+  Variavel = character(),
+  Media_Tratamento = numeric(),
+  Media_Controle = numeric(),
+  Diferenca = numeric(),
+  p_valor = numeric(),
+  stringsAsFactors = FALSE
+)
+
+for (var in varie) {
+  tratamento <- Maimonides_italia[[var]][Maimonides_italia$o_math == 1]
+  controle <- Maimonides_italia[[var]][Maimonides_italia$o_math == 0]
+  
+  teste <- t.test(tratamento, controle)
+  
+  resultados_balanceamento <- rbind(resultados_balanceamento, 
+                                    data.frame(
+                                      Variavel = var,
+                                      Media_Tratamento = mean(tratamento, na.rm = TRUE),
+                                      Media_Controle = mean(controle, na.rm = TRUE),
+                                      Diferenca = teste$estimate[1] - teste$estimate[2],
+                                      p_valor = teste$p.value
+                                    ))
+}
+
+print(resultados_balanceamento)

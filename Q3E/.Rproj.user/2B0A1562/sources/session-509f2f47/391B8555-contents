@@ -1,0 +1,11 @@
+
+
+reg_simples <- lm(mom_unemp ~ o_math, data = Maimonides_italia) # Regressão simples (sem controles)
+
+
+reg_cont <- lm(mom_unemp ~ o_math + factor(region) + factor(region)*+  #Regressão com Controles
+                 enrol_ins_snv, data=Maimonides_italia, cluster= "CLUSTER")
+
+summary(reg_cont)
+
+stargazer(reg_simples, reg_cont, type= "html", out="output/balanceamento.html")

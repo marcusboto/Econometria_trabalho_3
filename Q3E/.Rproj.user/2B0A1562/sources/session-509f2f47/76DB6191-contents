@@ -1,0 +1,46 @@
+#TRABALHO ECONOMETRIA
+#PROFESSOR: VITOR PEREIRA
+#GRUPO: MARCUS BOTO, PEDRO LATINI
+
+
+# ================================================================
+# CÓDIGO DA QUESTÃO 3.13: INTERPRETAÇÃO
+# ================================================================
+
+# 3.13) Comentário Teórico — Interpretação do coeficiente IV e viés por manipulação
+
+# Interpretação do coeficiente IV:
+# O coeficiente estimado no modelo IV representa o efeito causal local
+# (LATE) do tamanho da turma real sobre o desempenho em matemática,
+# usando a regra de Maimônides (clsize_hat) como instrumento.
+
+# Ele mede quanto a nota (answers_math_std) muda quando o tamanho da turma
+# aumenta em 1 aluno, para os “compliers”, isto é, as turmas cujo tamanho
+# realmente muda quando o cutoff da regra é ultrapassado.
+
+# Efeito da manipulação dos testes pelos professores:
+# Se professores tendem a ajustar notas, facilitar provas ou “inflar”
+# desempenho em determinadas salas, isso cria um canal adicional entre
+# tamanho da turma e nota — um canal que não passa pelo verdadeiro efeito
+# pedagógico.
+
+# Exemplo:
+# Turmas maiores -> mais pressão -> professores podem simplificar provas
+# ou ajudar mais alunos -> notas artificialmente mais altas.
+# Ou o contrário:
+# Turmas maiores -> mais caos -> professores corrigem mais duro → notas
+#   artificialmente mais baixas.
+
+# Assim, manipulação de notas gera uma violação do "exclusion restriction",
+# pois o instrumento (clsize_hat) afeta Y (nota) também via comportamento
+# do professor, não apenas via tamanho real da classe.
+
+# Maior manipulação em classes maiores porque:
+# Portanto, classes maiores são mais vulneráveis a manipulação intencional
+# ou inconsciente na avaliação.
+
+# O viés é para cima ou para baixo?
+# Para cima, notas são maiores nas turmas grandes
+# um viés que empurra o coeficiente do tamanho da turma para cima
+# ou seja, faz parecer que turmas maiores não prejudicam tanto quanto
+# realmente prejudicam (ou até que “ajudam”).

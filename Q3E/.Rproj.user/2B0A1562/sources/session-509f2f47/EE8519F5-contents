@@ -1,0 +1,64 @@
+#TRABALHO ECONOMETRIA
+#PROFESSOR: VITOR PEREIRA
+#GRUPO: MARCUS BOTO, PEDRO LATINI
+
+
+# ================================================================
+# 3.11: ESTATÍSTICAS DESCRITIVAS
+# ================================================================
+
+library(dplyr)
+library(ggplot2)
+
+CUTOFF <- 40
+
+dados_plot <- Maimonides_italia %>%
+  group_by(clsize_hat) %>%
+  summarise(mean_score = mean(answers_math_std, na.rm = TRUE),
+            lado_cutoff = first(lado_cutoff))
+
+reg_esq <- lm(answers_math_std ~ clsize_hat,
+              data = Maimonides_italia %>% filter(lado_cutoff == "Esquerda"))
+
+reg_dir <- lm(answers_math_std ~ clsize_hat,
+              data = Maimonides_italia %>% filter(lado_cutoff == "Direita"))
+
+linha_esq <- data.frame(clsize_hat = seq(min(dados_plot$clsize_hat), CUTOFF, length.out = 100))
+linha_esq$pred <- predict(reg_esq, newdata = linha_esq)
+
+linha_dir <- data.frame(clsize_hat = seq(CUTOFF, max(dados_plot$clsize_hat), length.out = 100))
+linha_dir$pred <- predict(reg_dir, newdata = linha_dir)
+
+ggplot() +
+  geom_point(data = dados_plot,
+             aes(x = clsize_hat, y = mean_score), alpha = 0.5) +
+  geom_line(data = linha_esq,
+            aes(x = clsize_hat, y = pred), color = "blue", size = 1) +
+  geom_line(data = linha_dir,
+            aes(x = clsize_hat, y = pred), color = "red", size = 1) +
+  geom_vline(xintercept = CUTOFF, linetype = "dashed") +
+  labs(title = "RDD com Tamanho Predito da Turma (clsize_hat)",
+       x = "Tamanho Predito da Turma",
+       y = "Nota média (answers_math_std)") +
+  theme_minimal()
+
+
+# Obtemos uma medida mais adequada para identificar a relação causal entre
+# tamanho da turma e desempenho dos alunos.
+#
+# O clsize_hat é determinado exclusivamente pela Regra de Maimônides,
+# que define o tamanho máximo das classes e gera uma divisão mecânica
+# das turmas quando o número de alunos ultrapassa o cutoff. Essa regra
+# produz uma variação exógena no tamanho predito, funcionando como um
+# instrumento quase-aleatório. Por isso, o clsize_hat é apropriado para
+# um desenho RDD e para inferência causal.
+
+# Já o tamanho real das turmas pode ser endógeno: escolas podem ajustar
+# turmas menores para alunos mais fracos, distribuir professores melhores
+# em classes específicas ou reorganizar salas de acordo com recursos,
+# perfil socioeconômico ou desempenho esperado. Assim, o tamanho real pode
+# estar correlacionado com variáveis não observadas (qualidade da escola,
+# habilidade dos alunos, SES, etc.), gerando viés de variável omitida.
+
+# Portanto, o uso do tamanho predito (clsize_hat) reduz problemas de
+# endogeneidade e é mais adequado para estimar a relação causal no RDD.

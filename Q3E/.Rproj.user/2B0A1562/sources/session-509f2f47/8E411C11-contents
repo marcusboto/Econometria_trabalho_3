@@ -1,0 +1,1021 @@
+---
+title: "Trabalho Econometria"
+author: "Pedro Affonso Ferreira Latini, Marcus Vinicius Rocha Boto"
+date: "2025-11-21"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+source("code/_master.R")
+```
+
+## Introdução
+
+Neste arquivo markdown iremos responder as duas primeiras questões do trabalho, conforme instruído pelo professor, os arquivos de código estão na pasta "code", os arquivos de base de dados estão localizados em "input" e tudo que foi gerado está na pasta "output". Para a questão 1, utlizamos a seed 119021721, a mais baixa do grupo. Todos os códigos estão numerados, porém para evitar poluição visual, iremos apenas utilizar o número que precede sua descrição, por exemplo "02geradados.R" irá se tornar "02" e assim por diante
+
+## Questão 1
+### 1.1 Tabela de Estatísticas descritivas utilizando o pacote Stargazer.
+
+Códigos utilizados: "02", "03", "04" e "05"
+
+```{r Tabela Descritiva, cache=TRUE, results='asis'}
+
+load(file.path(input, "BASEQ01.RDATA"))
+library(stargazer)
+
+#SELECIONAR VARIÁVEIS
+
+variaveis_tabela <- data[, c("education", 
+                                  "male",
+                                  "white",
+                                  "experience",
+                                  "wage_homo",
+                                  "wage_hetero",
+                                  "log_wage_homo",
+                                  "log_wage_hetero")]
+#TABELA USANDO O PACOTE STARGAZER
+
+stargazer(variaveis_tabela, 
+                     type = "html",
+                     title = "TABELA 1: Estatísticas Descritivas usando Stargazer",
+                     digits = 2,
+                     covariate.labels = c(
+                       "Anos de Estudo",
+                       "Sexo Masculino",
+                       "Raça Branca", 
+                       "Experiência Profissional",
+                       "Salário (R$) - Homocedástico",
+                       "Salário (R$) - Heterocedástico",
+                       "Log Salário - Homocedástico",
+                       "Log Salário - Heterocedástico"
+                     ),
+                     summary.stat = c("n", "mean", "median", "sd", "min", "max"))
+```
+### 1.2 Scatterplot usando ggplot2
+
+Códigos utilizados: "06" e "07". 
+
+```{r Scatterplots}
+library(ggplot2)
+
+grafico_salario_x_educ <- ggplot2::ggplot(data,ggplot2::aes(x=education, y=wage_homo)) +
+  
+  ggplot2::geom_point(alpha = 0.5, color = "darkblue", size = 1.2) +
+
+#ADICIONAR REGRESSÃO LINEAR
+
+ggplot2::geom_smooth(method = "lm", color = "darkred", se = TRUE, fill = "green", alpha = 0.4)
+
+print(grafico_salario_x_educ)
+
+#SALVAR EM PNG
+
+ggplot2::ggsave(file.path(output, "graficosalarioeduccomlm.png"),
+                plot = grafico_salario_x_educ,
+                width = 5, 
+                height = 5,
+                dpi = 300)
+```
+
+### 1.3 Substituindo wage_homo por log_wage_homo
+
+Códigos utilizados: "08" e "09".
+
+```{r Log_homocedástico}
+load(file.path("input/BASEQ01.RData"))
+library(ggplot2)
+
+#SCATTERPLOT LOG SALÁRIO X EDUC
+
+grafico_salario_x_educ <- ggplot2::ggplot(data,ggplot2::aes(x=education, y=log_wage_homo)) +
+  
+  ggplot2::geom_point(alpha = 0.5, color = "blue", size = 1.2) +
+  
+  #ADICIONAR REGRESSÃO LINEAR
+  
+  ggplot2::geom_smooth(method = "lm", color = "red", se = TRUE, fill = "violet", alpha = 0.4)
+
+print(grafico_salario_x_educ)
+
+#SALVAR EM PNG
+
+ggplot2::ggsave(file.path(output, "graficologsalarioeduc.png"),
+                plot = grafico_salario_x_educ,
+                width = 5, 
+                height = 5,
+                dpi = 300)
+#SCATTERPLOT LOG SALARIO X EXP
+
+grafico_salario_x_educ <- ggplot2::ggplot(data,ggplot2::aes(x=experience, y=log_wage_homo)) +
+  
+  ggplot2::geom_point(alpha = 0.5, color = "blue", size = 1.2) +
+  
+  #ADICIONAR REGRESSÃO LINEAR
+  
+  ggplot2::geom_smooth(method = "lm", color = "cyan", se = TRUE, fill = "lightblue", alpha = 0.4)
+
+print(grafico_salario_x_educ)
+
+#SALVAR EM PNG
+
+ggplot2::ggsave(file.path(output, "graficologsalarioexp.png"),
+                plot = grafico_salario_x_educ,
+                width = 5, 
+                height = 5,
+                dpi = 300)
+```
+###1.4 Regressão Mincer
+
+Código utilizado "10"
+
+```{r Mincer, cache=TRUE, results='asis'}
+load(file.path(input,"BASEQ01.RData"))
+library(stargazer)
+
+#REGRESSÃO MINCERIANA
+
+regressao_mincer <- lm(log_wage_homo ~ education + 
+                         experience + 
+                         I(experience^2) +
+                         north + 
+                         northeast +
+                         centerwest + 
+                         south + 
+                         male + 
+                         white,
+                       data = data)
+
+
+#SALVANDO O ARQUIVO
+
+stargazer(regressao_mincer,
+                     type = "html",
+                     title = "TABELA REGRESSÃO MINCERIANA",
+                     dep.var.labels = "Log Salário",
+                     covariate.labels = c(
+                       "Anos de Estudo",
+                       "Experiência",
+                       "Experiência ao Quadrado",
+                       "Região Norte",
+                       "Região Nordeste", 
+                       "Região Sul",
+                       "Região Centro-Oeste",
+                       "Sexo Masculino",
+                       "Raça Branca"),
+                     digits = 5,
+                     out = file.path(output, "RegressaoMincer.html"))
+```
+
+### 1.5 Gráfico 3D
+
+### 1.6 Cálculo de resíduos e histograma
+
+Códigos utilizados: "11", "12", "13"
+
+```{r Resíduos}
+load(file.path("input/regressao_mincer.RData"))
+library(ggplot2)
+#CALCULAR RESÍDUOS
+
+data$residuos <- residuals(regressao_mincer)
+data$residuos_square <- data$residuos^2
+
+#Criar Histograma
+
+histograma_residuos <- ggplot(data,
+                              aes(x = residuos)) +
+  geom_histogram(aes(y = ..density..),
+                 bins = 30,
+                 fill = "lightblue",
+                 color = "black",
+                 alpha = 0.5) +
+  geom_density(alpha = 0.5, fill = "red", color = "darkred") +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "blue", linewidth = 1)
+
+print(histograma_residuos)
+
+#SALVAR HISTOGRAMA
+
+ggsave(file.path(output, "histograma_residuos.png"), 
+       histograma_residuos, width = 10, height = 6, dpi = 300)
+```
+###1.7 Utilizando Log_Hetero
+
+Códigos utilizados "14" e "15".
+
+```{r Usando log_hetero, cache=TRUE, results='asis'}
+
+library(ggplot2)
+library(stargazer)
+
+load(file.path("input/BASEQ01.RData"))
+
+#REGRESSÃO MINCERIANA (HETEROCEDÁSTICA)
+
+regressao_mincer_hetero <- lm(log_wage_hetero ~ education + 
+                         experience + 
+                         I(experience^2) +
+                         north + 
+                         northeast +
+                         centerwest + 
+                         south + 
+                         male + 
+                         white,
+                       data = data)
+
+
+#SALVANDO O ARQUIVO
+
+stargazer(regressao_mincer_hetero,
+                     type = "html",
+                     title = "TABELA REGRESSÃO MINCERIANA HETERO",
+                     dep.var.labels = "Log Salário Hetero",
+                     covariate.labels = c(
+                       "Anos de Estudo",
+                       "Experiência",
+                       "Experiência ao Quadrado",
+                       "Região Norte",
+                       "Região Nordeste", 
+                       "Região Sul",
+                       "Região Centro-Oeste",
+                       "Sexo Masculino",
+                       "Raça Branca"),
+                     digits = 5,
+                     out = file.path(output, "RegressaoMincerHetero.html"))
+load(file.path("input/regressao_mincer.RData"))
+
+#SALVANDO EM .RDATA
+
+save(regressao_mincer_hetero,
+     file = file.path(input, "regressao_mincer_hetero.RData"))
+
+#CALCULAR RESÍDUOS
+
+data$residuoshet <- residuals(regressao_mincer_hetero)
+data$residuoshet_square <- data$residuoshet^2
+
+#Criar Histograma
+
+histograma_residuos <- ggplot(data,
+                              aes(x = residuoshet)) +
+  geom_histogram(aes(y = ..density..),
+                 bins = 30,
+                 fill = "lightblue",
+                 color = "black",
+                 alpha = 0.5) +
+  geom_density(alpha = 0.5, fill = "red", color = "darkred") +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "blue", linewidth = 1)
+
+#SALVAR HISTOGRAMA
+
+ggsave(file.path(output, "histograma_residuos_het.png"), 
+       histograma_residuos, width = 10, height = 6, dpi = 300)
+```
+### 1.8 Teste de White
+
+Códigos utilizados: "10", "16", "17", "18"
+
+```{r Testes White, cache=TRUE, results='asis'}
+
+library(stargazer)
+library(lmtest)
+
+load(file.path("input/regressao_mincer.RData"))
+
+#TESTE DE WHITE USANDO PACOTE LMTEST
+
+teste_white <- bptest(regressao_mincer,
+                      ~ education + experience + I(experience^2)
+                      + north + northeast + south + centerwest + male + white +
+                      I(education^2)  + I(experience^2) + education:experience +
+                        education:I(experience^2),
+                      data = data)
+
+#INTERPRETAÇÃO
+
+estatistica_white <- teste_white$statistic
+valorp_white <- teste_white$p.value
+resultados <- data.frame(
+  Teste = "White para Heterocedasticidade",
+  Estatistica_LM = round(estatistica_white, 4),
+  valorp_white = format.pval(valorp_white, digits = 4),
+  Significancia = ifelse(valorp_white < 0.01, "***", 
+                         ifelse(valorp_white < 0.05, "**",
+                                ifelse(valorp_white < 0.10, "*", "Não significativo"))),
+  Interpretacao = ifelse(valorp_white < 0.05, 
+                         "Heterocedasticidade detectada", 
+                         "Homocedasticidade")
+)
+
+
+#SALVAR PARA UTILIZAR NO STARGAZER
+
+save(teste_white,
+     file = file.path(input, "teste_White.RData"))
+load(file.path("input/regressao_mincer_hetero.RData"))
+
+#TESTE DE WHITE (HETERO) USANDO PACOTE LMTEST
+
+teste_white_hetero <- bptest(regressao_mincer_hetero,
+                      ~ education + experience + I(experience^2)
+                      + north + northeast + south + centerwest + male + white +
+                        I(education^2)  + I(experience^2) + education:experience +
+                        education:I(experience^2),
+                      data = data)
+
+#INTERPRETAÇÃO
+
+estatistica_white_hetero <- teste_white_hetero$statistic
+valorp_white_hetero <- teste_white_hetero$p.value
+
+resultados <- data.frame(
+  Teste = "White para Heterocedasticidade",
+  Estatistica_LM_hetero = round(estatistica_white_hetero, 4),
+  valorp_white_hetero = format.pval(valorp_white_hetero, digits = 4),
+  Significancia = ifelse(valorp_white_hetero < 0.01, "***", 
+                         ifelse(valorp_white_hetero < 0.05, "**",
+                                ifelse(valorp_white_hetero < 0.10, "*", "Não significativo"))),
+  Interpretacao = ifelse(valorp_white_hetero < 0.05, 
+                         "Heterocedasticidade detectada", 
+                         "Homocedasticidade")
+)
+
+
+#SALVAR PARA UTILIZAR NO STARGAZER
+
+save(teste_white_hetero,
+     file = file.path(input, "teste_White_hetero.RData"))
+
+white_comp <- data.frame(Teste = c("White Log Salário Homocedástico", "White Log Salário Heterocedástico"),
+                         "Estatistica" = c(teste_white$statistic, teste_white_hetero$statistic),
+                         "p-valor" = c(teste_white$p.value, teste_white_hetero$p.value),
+                         "Resultado" = c(ifelse(teste_white$p.value < 0.05, 
+                                              "Heterocedasticidade", "Homocedasticidade"),
+                                       ifelse(teste_white_hetero$p.value < 0.05, 
+                                              "Heterocedasticidade", "Homocedasticidade"))
+)
+
+#SALVANDO A TABELA
+
+stargazer(white_comp,
+          type = "html",
+          title = "Log Homo x Log Hetero",
+          summary = FALSE,
+          rownames = FALSE,
+          out = file.path(output, "CompTestesWhite.html"))
+```
+
+### 1.9 Regressão Mincer FGLS
+
+Códigos utilizados: "19" e "20". Comparado com o Modelo Brasileiro, descrito no código "3", nos aproximamos dos valores de retorno de experiência e retornos decrescentes de escala, mas nos distanciamos no prêmio para homens e brancos, assim como subestimamos os prêmios regionais.
+
+```{r Mincer FGLS, cache=TRUE, results='asis'}
+library(lmtest)
+library(stargazer)
+#SELECIONAR BASE DE DADOS
+
+load(file.path(input,"regressao_mincer_hetero.RData"))
+
+#CALCULAR VARIÂNCIA
+
+
+residuos <- residuals(regressao_mincer_hetero)
+
+log_residuos_quadrados <- log(residuos^2)
+
+variancia_modelo <- lm(log_residuos_quadrados ~ education + 
+                         experience + 
+                         I(experience^2) +
+                         north + 
+                         northeast +
+                         centerwest + 
+                         south + 
+                         male + 
+                         white,
+                       data = data)
+
+estimacao_variancia <- exp(predict(variancia_modelo))
+
+
+#SALVAR COMO .RData
+
+
+save(estimacao_variancia,
+     file = file.path(input, "estimacao_variancia.RData"))
+
+#Calculo de Mincer FGLS
+
+regressao_mincer_fgls <- lm(log_wage_hetero ~ education + 
+                         experience + 
+                         I(experience^2) +
+                         north + 
+                         northeast +
+                         centerwest + 
+                         south + 
+                         male + 
+                         white,
+                         weights = 1/estimacao_variancia,
+                       data = data)
+
+
+#SALVAR COMO .RData
+
+
+save(regressao_mincer_fgls,
+     file = file.path(input, "regrssao_mincer_fgls.RData"))
+
+#REPORTANDO COM STARGAZER
+
+stargazer(regressao_mincer, regressao_mincer_fgls,
+          type = "html",
+          title = "Mincer OLS X Mincer FGLS",
+          dep.var.labels = "Log do Salário Heterocedástico",
+          covariate.labels = c("Anos de Estudo", "Experiência Profissional", 
+                               "Experiência ao Quadrado", "Região Norte",
+                               "Região Nordeste", "Região Sul", 
+                               "Região Centro-Oeste", "Sexo Masculino", 
+                               "Raça Branca"),
+          column.labels = c("OLS", "FGLS"),
+          digits = 4)
+```
+### 1.10 Comparando tamanhos de amostra
+
+Códigos utilizados:"10","21", "22, "23", "24", "25"
+
+Há muita pouca diferença em dados obtidos ao rodarmos OLS contra FGLS com uma amostra de n = 200000; no entanto ao compararmos com n = 2000 e utilizarmos os valores de referência descritos no código gerador, observamos que cada vez mais a amostra se aproxima dos valores indicados por Mincer ao Brasil
+
+
+```{r Amostras Amplas, cache=TRUE, results='asis'}
+
+library(lmtest)
+library(stargazer)
+
+load(file.path("input/BASEAumentada.RData"))
+
+
+
+#REGRESSÃO MINCERIANA (HETEROCEDÁSTICA)
+
+regressao_mincer_hetero_ampla <- lm(log_wage_hetero ~ education + 
+                                experience + 
+                                I(experience^2) +
+                                north + 
+                                northeast +
+                                centerwest + 
+                                south + 
+                                male + 
+                                white,
+                              data = data)
+
+
+#SALVANDO O ARQUIVO
+
+stargazer(regressao_mincer_hetero_ampla,
+          type = "html",
+          title = "TABELA REGRESSAO MINCERIANA HETERO Ampla",
+          dep.var.labels = "Log Salario Hetero",
+          covariate.labels = c(
+            "Anos de Estudo",
+            "Experiencia",
+            "Experiencia ao Quadrado",
+            "Regiao Norte",
+            "Regiao Nordeste", 
+            "Regiao Sul",
+            "Regiao Centro-Oeste",
+            "Sexo Masculino",
+            "Raca Branca"),
+          digits = 5)
+
+#CALCULAR VARIÂNCIA
+
+
+residuos <- residuals(regressao_mincer_hetero_ampla)
+
+log_residuos_quadrados_amplos <- log(residuos^2)
+
+variancia_modelo_amplo <- lm(log_residuos_quadrados_amplos ~ education + 
+                         experience + 
+                         I(experience^2) +
+                         north + 
+                         northeast +
+                         centerwest + 
+                         south + 
+                         male + 
+                         white,
+                       data = data)
+
+estimacao_variancia_ampla <- exp(predict(variancia_modelo_amplo))
+
+#Calculo de Mincer FGLS
+
+regressao_mincer_fgls_ampla <- lm(log_wage_hetero ~ education + 
+                              experience + 
+                              I(experience^2) +
+                              north + 
+                              northeast +
+                              centerwest + 
+                              south + 
+                              male + 
+                              white,
+                            weights = 1/estimacao_variancia_ampla,
+                            data = data)
+
+stargazer(regressao_mincer_fgls_ampla,
+                     type = "html",
+                     title = "TABELA REGRESSaO MINCERIANA FGLS Ampla",
+                     dep.var.labels = "Log Salario Hetero",
+                     covariate.labels = c(
+                       "Anos de Estudo",
+                       "Experiencia",
+                       "Experiencia ao Quadrado",
+                       "Regiao Norte",
+                       "Regiao Nordeste", 
+                       "Regiao Sul",
+                       "Regiao Centro-Oeste",
+                       "Sexo Masculino",
+                       "Raca Branca"),
+                     digits = 5)
+
+
+#Salva em .RData
+
+save(regressao_mincer_fgls_ampla,
+     file = file.path(input, "regrssao_mincer_fgls_ampla.RData"))
+
+```
+####1.10 Continuação, relembrando as amostras com n = 2000.
+
+```{r continua, cache=TRUE, results='asis'}
+#SELECIONAR BASE DE DADOS
+
+load(file.path("input/BASEQ01.RData"))
+
+#REGRESSÃO MINCERIANA (HETEROCEDÁSTICA)
+
+regressao_mincer_hetero <- lm(log_wage_hetero ~ education + 
+                         experience + 
+                         I(experience^2) +
+                         north + 
+                         northeast +
+                         centerwest + 
+                         south + 
+                         male + 
+                         white,
+                       data = data)
+
+
+residuos <- residuals(regressao_mincer_hetero)
+
+log_residuos_quadrados <- log(residuos^2)
+
+variancia_modelo <- lm(log_residuos_quadrados ~ education + 
+                         experience + 
+                         I(experience^2) +
+                         north + 
+                         northeast +
+                         centerwest + 
+                         south + 
+                         male + 
+                         white,
+                       data = data)
+
+estimacao_variancia <- exp(predict(variancia_modelo))
+
+regressao_mincer_fgls <- lm(log_wage_hetero ~ education + 
+                         experience + 
+                         I(experience^2) +
+                         north + 
+                         northeast +
+                         centerwest + 
+                         south + 
+                         male + 
+                         white,
+                         weights = 1/estimacao_variancia,
+                       data = data)
+
+#SALVAR COMO .RData
+
+
+save(regressao_mincer_fgls,
+     file = file.path(input, "regrssao_mincer_fgls.RData"))
+
+#REPORTANDO COM STARGAZER
+
+library(stargazer)
+
+stargazer(regressao_mincer_hetero, regressao_mincer_fgls,
+          type = "html",
+          title = "Mincer OLS X Mincer FGLS",
+          dep.var.labels = "Log do Salario Heterocedastico",
+          covariate.labels = c("Anos de Estudo", "Experiencia Profissional", 
+                               "Experiencia ao Quadrado", "Regiao Norte",
+                               "Regiao Nordeste", "Regiao Sul", 
+                               "Regiao Centro-Oeste", "Sexo Masculino", 
+                               "Raca Branca"),
+          column.labels = c("OLS", "FGLS"),
+          digits = 4,
+          out = file.path(output, "OLSFGLS.html"))
+```
+## Questão 2
+
+### 2.1 Regressão Cambial
+```{R}
+
+library(readxl)
+library(dplyr)
+library(purrr)
+library(systemfit)
+
+dados <- read_excel("T2dados.xlsx")
+
+setores <- colnames(dados %>% select(starts_with("setor")))
+
+eq_list <- map(
+  setores,
+  ~ as.formula(paste0(.x, " ~ cambio + ibcbr"))
+)
+
+names(eq_list) <- setores
+
+modelo_sur <- systemfit(eq_list, method = "SUR", data = dados)
+
+summary(modelo_sur)
+
+```
+### 2.3 Interpretação de Coeficientes
+```{R}
+#O sinal esperado para este coeficiente é positivo, indicando que a desvalorização da moeda local (aumento do cambio) eleva os custos e, consequentemente, os preços dos bens. A maioria dos setores apresentou sinal positivo, então em teoria estão corretos.
+
+#Esses resultados mostram que, embora o repasse cambial seja estatisticamente presente e positivo na maioria dos setores (em linha com a teoria), o modelo como um todo é moderado/fraco na explicação da variação total dos preços.
+```
+
+### 2.4 Incluindo Dummies Sazonais
+```{R}
+library(readxl)
+library(dplyr)
+library(purrr)
+library(systemfit)
+
+
+dados <- read_excel("T2dados.xlsx")
+
+setores <- colnames(dados %>% select(starts_with("setor")))
+
+
+eq_list <- map(
+  setores,
+  ~ as.formula(paste0(.x, " ~ cambio + ibcbr"))
+)
+
+names(eq_list) <- setores
+
+modelo_sur <- systemfit(eq_list, method = "SUR", data = dados)
+
+summary(modelo_sur)
+
+
+teste_lb_setores <- map(
+  setores,
+  ~ {
+    modelo <- lm(as.formula(paste0(.x, " ~ cambio + ibcbr")), data = dados)
+    Box.test(residuals(modelo), lag = 12, type = "Ljung-Box")
+  }
+)
+
+# nomear lista com os setores
+names(teste_lb_setores) <- setores
+
+# Exibir resultados
+teste_lb_setores
+
+```
+### 2.4.2 HAC
+```{R}
+# A conclusão para o teste é mista. Utilizando um nível de significância de alpha = 0.05: Para 10 dos 24 setores (setor00, setor01, setor02, setor04, setor05, setor10, setor11, setor14, setor15 e setor21), o valor-p foi menor que 0.05, o que leva à rejeição da hipótese nula (H0). 
+# As equações apresentam autocorrelação significativa nos resíduos, indicando que o modelo OLS para esses setores está mal especificado ou precisa de termos autorregressivos.
+# Para os outros 14 setores (setor03, setor06, setor07, setor08, setor09, setor12, setor13, setor16, setor17, setor18, setor19, setor20, setor22 e setor23), o valor-p foi superior a 0.05, portanto, a hipótese nula não foi rejeitada. A conclusão para estes setores é que não há evidência estatística de autocorrelação serial nos resíduos.
+
+```
+
+
+### 2.5 Impacto total do repasse cambial
+```{R}
+
+library(readxl)
+library(dplyr)
+library(purrr)
+library(systemfit)
+
+dados <- read_excel("T2dados.xlsx")
+
+dados$mes <- factor(format(dados[[1]], "%m"))
+
+setores <- colnames(dados %>% select(starts_with("setor")))
+
+eq_list <- map(
+  setores,
+  ~ as.formula(paste0(.x, " ~ cambio + ibcbr + mes"))
+)
+
+names(eq_list) <- setores
+
+modelo_sur_sazonal <- systemfit(eq_list, method = "SUR", data = dados)
+
+summary(modelo_sur_sazonal)
+```
+### 2.6 Interpretação dos coeficientes das dummies sazonais 
+```{R}
+# Aumentou a magnitude e a coerência teórica dos coeficientes de repasse cambial para a maioria dos setores, reforçando a conclusão de que a sazonalidade estava anteriormente causando distorções nas estimativas.
+# O setor17 teve uma mudança drástica e o setor11, o repasse caiu para quase zero.
+```
+
+### 2.7 Ljung-Box e Breusch-Pagan
+```{R}
+
+library(readxl)
+library(dplyr)
+library(purrr)
+library(broom)
+
+dados <- read_excel("T2dados.xlsx")
+
+colnames(dados)[1] <- "data"
+
+dados <- dados %>%
+  mutate(
+    mes = factor(format(data, "%m"))
+  )
+
+setores <- colnames(dados %>% select(starts_with("setor")))
+
+
+rodar_modelo_setor <- function(setor_nome) {
+  
+  setor_lag1  <- paste0(setor_nome, "_lag1")
+
+  dados_modelo <- dados %>%
+    mutate(
+      !!setor_lag1 := lag(.data[[setor_nome]], 1),
+      cambio_lag1  = lag(cambio, 1)
+    ) %>%
+    filter(!is.na(.data[[setor_lag1]]))
+  
+  # fórmula dinâmica
+  form <- as.formula(
+    paste0(
+      setor_nome, " ~ cambio + ibcbr + ",
+      setor_lag1, " + cambio_lag1 + mes"
+    )
+  )
+  
+  modelo <- lm(form, data = dados_modelo)
+  
+  beta1 <- coef(modelo)["cambio"]
+  beta4 <- coef(modelo)["cambio_lag1"]
+  
+  repasse_total <- beta1 + beta4
+  
+  list(
+    setor = setor_nome,
+    modelo = modelo,
+    repasse_total = repasse_total,
+    coeficientes = tidy(modelo)
+  )
+}
+
+
+resultados <- map(setores, rodar_modelo_setor)
+
+
+tabela_repasse <- map_dfr(resultados, ~ data.frame(
+  setor = .x$setor,
+  repasse_total = .x$repasse_total
+))
+
+tabela_repasse
+
+```
+### 2.7.1 Conclusão para o teste
+```{R}
+# Para 10 dos 24 setores o valor-p foi menor que 0.05, o que leva à rejeição da hipótese nula (H0).
+# A conclusão é que as equações para esses 10 setores apresentam autocorrelação serial significativa nos resíduos.
+# Para os 14 setores restantes, o valor-p foi maior que 0.05, e a hipótese nula não foi rejeitada. A conclusão é que não há evidência estatística de autocorrelação serial nos resíduos desses modelos.
+```
+
+### 2.8 Reestimar o modelo incluindo a variável dependente defasada (t–1) e a variável câmbio defasada (t–1)
+```{R}
+library(readxl)
+library(dplyr)
+library(purrr)
+library(systemfit)
+library(lmtest)
+
+dados <- read_excel("T2dados.xlsx")
+
+colnames(dados)[1] <- "data"
+
+dados <- dados %>%
+  mutate(
+    mes = factor(format(data, "%m"))
+  )
+
+setores <- colnames(dados %>% select(starts_with("setor")))
+
+for (s in setores) {
+  dados[[paste0(s, "_lag1")]] <- dplyr::lag(dados[[s]], 1)
+}
+
+dados$cambio_lag1 <- dplyr::lag(dados$cambio, 1)
+
+dados <- dados %>% filter(!is.na(cambio_lag1))
+
+eq_list <- map(
+  setores,
+  ~ as.formula(
+    paste0(
+      .x, " ~ cambio + ibcbr + ",
+      .x, "_lag1 + cambio_lag1 + mes"
+    )
+  )
+)
+
+names(eq_list) <- setores
+
+modelo_sur <- systemfit(eq_list, method = "SUR", data = dados)
+
+summary(modelo_sur)
+
+residuos <- residuals(modelo_sur)
+
+testes <- map(names(residuos), function(s){
+  
+  res <- residuos[[s]]
+  
+  lista_testes <- list(
+    Ljung_Box = Box.test(res, lag = 12, type = "Ljung-Box"),
+    Breusch_Pagan = bptest(eq_list[[s]], data = dados)
+  )
+  
+  return(lista_testes)
+})
+
+names(testes) <- names(residuos)
+
+testes
+```
+### 2.8.2 Impacto total do repasse cambial para os preços
+```{R}
+# O impacto total de longo prazo do repasse cambial foi significativamente maior para os preços dos setores setor03 e setor22, indicando que a maior parte da variação cambial é absorvida por esses setores ao longo do tempo. A inclusão da variável dependente defasada e das dummies sazonais melhorou o ajuste do modelo (aumentando o R² ajustado) e aumentou a magnitude do repasse em comparação com o modelo anterior, refletindo melhor a persistência dos choques nos preços. 
+# Setores como setor09 e setor13 apresentaram um impacto total de longo prazo negativo (mesmo que pequeno), sugerindo que a dinâmica dos preços é dominada por fatores internos e não pelo câmbio.
+```
+
+### 2.9 Testar a presença de autocorrelação utilizando o teste Ljung–Box e testar a presença de heterocedasticidade utilizando o teste Breusch–Pagan
+```{R}
+library(readxl)
+library(dplyr)
+library(purrr)
+library(systemfit)
+library(lmtest) 
+
+dados <- read_excel("T2dados.xlsx")
+colnames(dados)[1] <- "data"
+
+dados <- dados %>%
+    mutate(
+        mes = factor(format(data, "%m"))
+    )
+
+setores <- colnames(dados %>% select(starts_with("setor")))
+
+for (s in setores) {
+    dados[[paste0(s, "_lag1")]] <- dplyr::lag(dados[[s]], 1)
+}
+dados$cambio_lag1 <- dplyr::lag(dados$cambio, 1)
+
+dados <- dados %>% filter(!is.na(cambio_lag1))
+
+eq_list <- map(
+    setores,
+    ~ as.formula(
+        paste0(
+            .x, " ~ cambio + ibcbr + ",
+            .x, "_lag1 + cambio_lag1 + mes"
+        )
+    )
+)
+names(eq_list) <- setores
+modelo_sur <- systemfit(eq_list, method = "SUR", data = dados)
+
+residuos <- residuals(modelo_sur)
+
+testes <- map(setores, function(s){
+    
+    res <- residuos[[s]]
+    
+    modelo_lm <- lm(eq_list[[s]], data = dados)
+    
+    lista_testes <- list(
+
+        Ljung_Box = Box.test(res, lag = 12, type = "Ljung-Box"),
+
+        Breusch_Pagan = bptest(modelo_lm)
+    )
+    
+    return(lista_testes)
+})
+
+names(testes) <- setores
+```
+### 2.10 Reestime o modelo usando o erro robusto a heterocedasticidade e autocorrelação (HAC)
+```{R}
+
+library(readxl)
+library(dplyr)
+library(purrr)
+library(systemfit)
+library(lmtest)
+library(sandwich)
+
+dados <- read_excel("T2dados.xlsx")
+
+colnames(dados)[1] <- "data"
+
+dados <- dados %>%
+  mutate(
+    mes  = factor(format(data, "%m"))
+  )
+
+setores <- colnames(dados %>% select(starts_with("setor")))
+
+dados <- dados %>%
+  mutate(
+    cambio_lag1 = lag(cambio, 1)
+  )
+
+for(s in setores){
+  dados[[paste0(s, "_lag1")]] <- lag(dados[[s]], 1)
+}
+
+dados <- dados %>% filter(!is.na(cambio_lag1))
+
+equacoes <- map(
+  setores,
+  ~ as.formula(
+    paste0(.x, " ~ cambio + ibcbr + ",
+           .x, "_lag1 + cambio_lag1 + mes")
+  )
+)
+
+names(equacoes) <- setores
+
+modelo_sur <- systemfit(equacoes, method = "SUR", data = dados)
+summary(modelo_sur)
+
+repasse_total <- map_dbl(
+  setores,
+  ~ {
+    coefs <- coef(modelo_sur)[grep(paste0("^", .x, "_"), names(coef(modelo_sur)))]
+    beta1 <- coefs["cambio"]
+    beta4 <- coefs["cambio_lag1"]
+    beta1 + beta4
+  }
+)
+
+repasse_total
+
+residuos_sur <- residuals(modelo_sur)
+
+teste_lb <- map(
+  setores,
+  ~ Box.test(residuos_sur[[.x]], lag = 12, type = "Ljung-Box")
+)
+
+teste_bp <- map(
+  setores,
+  ~ bptest(equacoes[[.x]], data = dados)
+)
+
+modelos_individuais <- map(
+  setores,
+  ~ lm(
+    as.formula(paste0(.x, " ~ cambio + ibcbr + ",
+                      .x, "_lag1 + cambio_lag1 + mes")),
+    data = dados
+  )
+)
+
+coeftest_hac <- map(
+  modelos_individuais,
+  ~ {
+    vc <- NeweyWest(.x, lag = 12, prewhite = FALSE)
+    coeftest(.x, vcov. = vc)
+  }
+)
+
+teste_lb
+teste_bp
+coeftest_hac
+```

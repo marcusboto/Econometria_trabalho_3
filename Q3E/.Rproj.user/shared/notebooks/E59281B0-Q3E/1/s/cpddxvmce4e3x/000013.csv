@@ -1,0 +1,3 @@
+"0",""
+"0","# 7. Salvar gráfico"
+"0","ggsave(""output/rdd_dois_cutoffs.png"", p, width = 10, height = 6, dpi = 300)"

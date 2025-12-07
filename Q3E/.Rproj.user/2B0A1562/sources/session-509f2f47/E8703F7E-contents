@@ -1,0 +1,124 @@
+#TRABALHO ECONOMETRIA
+#PROFESSOR: VITOR PEREIRA
+#GRUPO: MARCUS BOTO, PEDRO LATINI
+
+
+# ================================================================
+# 3.12) Manipulação do running variable e consequências
+# ================================================================
+
+# Sim, se agentes (professores, diretores, pais) puderem manipular o running
+# variable perto do cutoff de forma sistemática, isso ameaça a suposição chave
+# do RDD: a continuidade das covariáveis (incluindo o potencial outcome)
+# condicional ao running variable quando aproximando-se do cutoff. Manipulação
+# gera ordenação/seleção ao redor do corte (bunching), e então a variação no
+# tratamento deixa de ser “quase-aleatória”. Nesse caso a estimação RDD pura
+# torna-se inválida, pois há correlação entre o erro e a variável de tratamento.
+
+# Invalida pois:
+# O pressuposto central do RDD é que unidades imediatamente à esquerda e à
+# direita do cutoff são comparáveis, exceto pelo tratamento. Se agentes
+#  movem unidades sobre o cutoff (ou evitam mover), essa comparabilidade
+#  é violada.
+# Em termos econométricos, cria-se correlação entre o running variable (ou
+# entre o indicador de tratamento) e variáveis não observadas que afetam o
+# outcome → viés de variável omitida.
+
+# Testes/práticas para detectar manipulação:
+# Teste de densidade (McCrary): checar se há descontinuidade na densidade do
+# running variable no cutoff (ex.: pacote rddensity ou função DCdensity).
+# testes de balanceamento: checar se covariáveis pré-determinadas são
+# contínuas no cutoff (placebo checks).
+# Placebo cutoffs: rodar o mesmo RDD em pontos fora do cutoff real para ver
+# se efeitos aparecem sem sentido.
+# Donut / exclusion window: remover observações muito próximas ao cutoff e
+# conferir robustez.
+
+# Alternativas:
+# 1) Fuzzy RDD / IV:
+# Se a regra (assignment) determina apenas parcialmente o tratamento
+# (p.ex. clsize_hat determina um "assignment" mas o tamanho real varia por
+# manipulação), use a indicação de estar acima/abaixo do cutoff (Z = 1[x>=c])
+# como instrumento para o tratamento real (clsize). Isso identifica o LATE
+# para compliers. Ou seja: primeiro estágio Z -> clsize; segundo estágio
+# clsize -> outcome (2SLS local).
+# Vantagem: lida com não-compliance; ainda exige que o instrumento (Z)
+# seja exógeno para compliers.
+
+# 2) Local randomization approach:
+# Em vez de assumir continuidade funcional, escolher uma janela muito
+# estreita ao redor do cutoff e tratar a alocação como quase-experimental
+# (randomização local). Usar testes de randomização/permuta e inference
+# de Fisher dentro dessa janela.
+
+# 3) Donut RDD:
+# Excluir uma pequena faixa em torno do cutoff (onde suspeita-se
+# manipulação) e estimar RDD fora dessa faixa. Pode reduzir viés se a
+# manipulação concentrar-se na vizinhança imediata do corte.
+#
+# 4) Diferenças em Diferenças (DiD) ou painel:
+# Se houver dados longitudinais/painel (mesmas turmas/anos),
+# combinar RDD com DiD pode controlar choques específicos de turma/escola.
+
+# 5) Covariate adjustment / matching local:
+# Ajustar por covariáveis pré-tratamento ou combinar RDD com matching
+# local para melhorar comparabilidade (mas atenção: não corrige
+# manipulação no running variable).
+
+# Recomendação prática:
+# Primeiro: rodar o teste de densidade (McCrary) e testes de balanceamento de
+# covariáveis pré-determinadas. Se houver evidência de manipulação, NÃO
+# confie em uma RDD simples.
+# Segundo: se o problema for non-compliance (regra determina mas nem sempre
+# implementam), aplicar Fuzzy RD/IV usando o indicador de corte como
+# instrumento.
+# Terceiro: complementar com local randomization (janela estreita + inference
+# por permuta) e/ou Donut RDD como checagem de robustez.
+
+# DAG (ASCII) — interpretação:
+
+# Aqui a DAG mostra a regra (Cutoff) que, idealmente, gera variação exógena no
+# tamanho predito; mas atores (Manipulação) podem influenciar o tamanho real
+# e também influenciar o outcome, criando um backdoor.
+
+# Clean (ideal) RDD:
+#
+#          Cutoff (Z)
+#             |
+#             v
+#      clsize_hat (X)  ---> Treatment (T) ---> Outcome (Y)
+#                         (se aplicável)
+
+#   Com manipulação (problema):
+#
+#          Cutoff (Z)
+#             |
+#             v
+#      clsize_hat (X)  ---> Treatment (T) ---> Outcome (Y)
+#                           ^   ^
+#                           |   |
+#                    Manipulação|
+#                          (M)  |
+#                               |
+#                    (Unobserved confounders U)
+
+# Explicação DAG:
+# Z (Cutoff/regra) deveria afetar Y só através de X/T (seta Z -> X -> T -> Y).
+# Se existe M (manipulação por diretor/professor) que:
+# afeta T (ou faz com que unidades saltem o cutoff),
+# e ao mesmo tempo afeta Y (p.ex. diretores alocam melhores professores a turmas que movem),
+# então existe um backdoor T <- M -> Y que invalida a comparação.
+# U são fatores não observados (qualidade escolar, socioeconômico) que
+# também podem conflitar com T e Y.
+
+# Interpretação prática da DAG:
+# A presença de M que depende de Z (ou que age diferentemente perto do cutoff)
+# quebra a suposição de que Z gera variação exógena. Logo RDD simples não é
+# confiável sem ajustes.
+
+# Ou seja:
+# Manipulação local do running variable pode sim invalidar RDD.
+# Se houver evidência de manipulação, combine estratégias: testes de densidade,
+# Donut RDD, Fuzzy RD/IV (quando apropriado), ou local randomization.
+# Sempre reportar todos os testes de robustez (densidade, balance, placebo)
+# para sustentar a validade causal.
